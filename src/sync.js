@@ -6,21 +6,27 @@ import { makeEncryptor, makeDecryptor } from './helpers'
 const makeSyncEncryptor = secretKey =>
   makeEncryptor(state => AES.encrypt(state, secretKey).toString())
 
+const decryptor = (state, secretKey) => {
+    const bytes = AES.decrypt(state, secretKey)
+    const decryptedString = bytes.toString(CryptoJSCore.enc.Utf8)
+    return JSON.parse(decryptedString)
+}
+
 const makeSyncDecryptor = (secretKey, oldSecretKey, onError) =>
   makeDecryptor(state => {
     try {
-      const bytes = AES.decrypt(state, secretKey)
-      const decryptedString = bytes.toString(CryptoJSCore.enc.Utf8)
-      return JSON.parse(decryptedString)
+        return decryptor(state, secretKey);
     } catch (err) {
-      if (oldSecretKey) {
-         const bytes = AES.decrypt(state, oldSecretKey)
-         const decryptedString = bytes.toString(CryptoJSCore.enc.Utf8)
-         return JSON.parse(decryptedString)
+      try {
+         if (!oldSecretKey) throw new Error(
+             'Could not decrypt state. Please verify that you are using the correct secret key.'
+           );
+         return decryptor(state, oldSecretKey);
+      } catch (e) {
+          throw new Error(
+              'Could not decrypt state. Please verify that you are using the correct secret key.'
+          );
       }
-      throw new Error(
-        'Could not decrypt state. Please verify that you are using the correct secret key.'
-      )
     }
   }, onError)
 
